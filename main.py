@@ -58,21 +58,22 @@ class SerialReaderApp:
 
     def write_to_influxdb(self, data):
         point = Point("pgxData")
-        for i, value in enumerate(data['grimmValues']):
-            point.field(f'grimmValue{i}', value)
         point.field('partectorNumber', data['partectorNumber'])
         point.field('partectorDiam', data['partectorDiam'])
         point.field('partectorMass', data['partectorMass'])
+        point.field('grimmValue', data['grimmValue'])
         point.field('temperature', data['temperature'])
         point.field('humidity', data['humidity'])
         point.field('pressure', data['pressure'])
         point.field('altitude', data['altitude'])
+        point.field('latitude', data['latitude'])
+        point.field('longitude', data['longitude'])
         point.field('co2', data['co2'])
         self.write_api.write(bucket="pgx", org="umt", record=point, numeric_precision=6)
 
     def read_serial_data(self):
         ser = serial.Serial(self.serial_port, 115200)
-        struct_format = '<33i5fH'
+        struct_format = '<2i8fH'
         while self.reading:
             if ser.in_waiting > 0:
                 while ser.read() != b'<':
@@ -82,15 +83,17 @@ class SerialReaderApp:
                 if ser.read() == b'>':
                     unpacked_data = struct.unpack(struct_format, data)
                     data_dict = {
-                        'grimmValues': unpacked_data[:31],
-                        'partectorNumber': unpacked_data[31],
-                        'partectorDiam': unpacked_data[32],
-                        'partectorMass': unpacked_data[33],
-                        'temperature': unpacked_data[34],
-                        'humidity': unpacked_data[35],
-                        'pressure': unpacked_data[36],
-                        'altitude': unpacked_data[37],
-                        'co2': unpacked_data[38]
+                        'partectorNumber': unpacked_data[0],
+                        'partectorDiam': unpacked_data[1],
+                        'partectorMass': unpacked_data[2],
+                        'grimmValue': unpacked_data[3],
+                        'temperature': unpacked_data[4],
+                        'humidity': unpacked_data[5],
+                        'pressure': unpacked_data[6],
+                        'altitude': unpacked_data[7],
+                        'latitude': unpacked_data[8],
+                        'longitude': unpacked_data[9],
+                        'co2': unpacked_data[10]
                     }
                     self.write_to_influxdb(data_dict)
                     print(data_dict)
